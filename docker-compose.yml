@@ -1,0 +1,79 @@
+version: "3"
+services:
+  service_a:
+    build: ./services/service_a
+    ports:
+      - "5001:5000"
+    volumes:
+      - ./services/service_a:/app
+      - ${UPLOAD_FOLDER}:${UPLOAD_FOLDER}
+    environment:
+      UPLOAD_FOLDER: ${UPLOAD_FOLDER}
+
+  service_b:
+    build: ./services/service_b
+    volumes:
+      - ./services/service_b:/app
+      - ${UPLOAD_FOLDER}:${UPLOAD_FOLDER}
+    depends_on:
+      - rabbitmq
+    environment:
+      UPLOAD_FOLDER: ${UPLOAD_FOLDER}
+
+  service_c:
+    build: ./services/service_c
+    volumes:
+      - ./services/service_c:/app
+    depends_on:
+      - rabbitmq
+      - postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_PORT: ${POSTGRES_PORT}
+
+  rabbitmq:
+    image: rabbitmq:management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
+
+  postgres:
+    image: postgres:latest
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - ./common/postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  pgadmin:
+    image: dpage/pgadmin4
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
+      CSRF_PROTECTION: False
+    ports:
+      - "8080:80"
+    depends_on:
+      - postgres
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
+
+  nginx:
+    image: nginx:latest
+    volumes:
+      - ./common/nginx/nginx.conf:/etc/nginx/nginx.conf
+    ports:
+      - "80:80"
+    depends_on:
+      - service_b
+
+volumes:
+  pgadmin-data:
